@@ -1,17 +1,26 @@
-import { Box, Stack } from '@mui/material'
-
-const items = [
-  'tomato',
-  'potato',
-  'onion',
-  'lettuce',
-  'apple',
-  'carrot',
-  'ginger',
-  'kale',
-]
+'use client';
+import { Box, Stack } from '@mui/material';
+import { firestore } from '../../firebase';
+import { collection, query, getDocs } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
 
 export default function HomePage() {
+  const [pantry, setPantry] = useState<string[]>([]);
+  useEffect(() => {
+    const updatePantry = async () => {
+      const snapshot = query(collection(firestore, 'pantry'));
+      const docs = await getDocs(snapshot);
+      const pantryList: string[] = []
+      docs.forEach((doc) => {
+        pantryList.push(doc.id);
+      });
+      return pantryList;
+    };
+    updatePantry()
+      .then(pantryList => setPantry(pantryList))
+      .catch(error => console.error('Error fetching pantry data:', error));
+  }, []);
+
   return (
     <Box
       width={'100vw'}
@@ -39,11 +48,11 @@ export default function HomePage() {
         overflow={'auto'} 
         border={'1px solid #333'}
       >
-        {items.map((i) => (
+        {pantry.map((i) => (
           <Box
             key={i}
             width={'100%'}
-            height={'100px'}
+            minHeight={'40px'}
             display={'flex'}
             // justifyContent={'center'}
             // alignItems={'center'}
