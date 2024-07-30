@@ -2,7 +2,7 @@
 import { Box, Button, Collapse, List, ListItemButton, ListItemText, ListSubheader, Modal, Stack, TextField, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { firestore } from '../../firebase';
-import { collection, query, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, getDocs, deleteDoc, doc, setDoc, getDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ExpandLess, ExpandMore } from '@mui/icons-material';
@@ -20,8 +20,13 @@ const modalStyle = {
   p: 4,
 };
 
+type PantryType = {
+  name: string;
+  count: number;
+};
+
 export default function HomePage() {
-  const [pantry, setPantry] = useState<string[]>([]);
+  const [pantry, setPantry] = useState<PantryType[]>([]);
   const router = useRouter();
 
   const [openCategory, setOpenCategory] = useState<boolean>(true);
@@ -36,9 +41,14 @@ export default function HomePage() {
   const updatePantry = async () => {
     const snapshot = query(collection(firestore, 'pantry'));
     const docs = await getDocs(snapshot);
-    const pantryList: string[] = []
+    const pantryList: PantryType[] = []
     docs.forEach((doc) => {
-      pantryList.push(doc.id);
+      const count = doc.data().count as number;
+      pantryList.push({
+        name: doc.id, 
+        count: count,
+        ...doc.data()
+      });
     });
     return pantryList;
   };
@@ -49,6 +59,28 @@ export default function HomePage() {
       .then(pantryList => setPantry(pantryList))
       .catch(error => console.error('Error fetching pantry data:', error));
     router.refresh();
+  };
+  
+  // const handleAddingItem = async (name: string, e: ChangeEvent<HTMLInputElement>) => {
+  //   const v = e.target.valueAsNumber;
+  //   if (!isNaN(v)) {
+  //     setValue(v);
+  //     await addItem(name, v)
+  //   }
+  // };
+  const handleAddItem = async (itemName: string) => {
+    if (value !== null) {
+      await addItem(itemName, value);
+    }
+  };
+
+  const addItem = async (itemName: string, itemNumber: number) => {
+    const docRef = doc(collection(firestore, 'pantry'), itemName);
+    const docSnap = await getDoc(docRef);
+    console.log(docSnap.data());
+
+    await setDoc(docRef, {count: 1})
+    await updatePantry();
   };
 
   useEffect(() => {
@@ -114,8 +146,20 @@ export default function HomePage() {
                         How Many
                       </Typography>
                       <Stack width='100%' direction='row' spacing={2}>
-                        <NumberInput />
-                        <Button variant='outlined'>Add</Button>
+                        <NumberInput 
+                          placeholder='Type a number...'
+                          value={value}
+                          onChange={(event, val) => setValue(val)}
+                        />
+                        <Button 
+                          variant='outlined'
+                          onClick={() => {
+                            void handleAddItem('Apple')
+                            handleCloseModal()
+                          }}
+                        >
+                          Add
+                        </Button>
                       </Stack>
                     </Box>
                   </Modal>
@@ -142,9 +186,9 @@ export default function HomePage() {
           overflow={'auto'} 
           border={'1px solid #333'}
         >
-          {pantry.map((i) => (
+          {pantry.map((item) => (
             <Box
-              key={i}
+              key={item.name}
               width={'100%'}
               minHeight={'50px'}
               display={'flex'}
@@ -160,7 +204,10 @@ export default function HomePage() {
                 sx={{m: 1, p: 1}}
               >
                 <Typography>
-                  {i.charAt(0).toUpperCase() + i.slice(1)}
+                  {item.name.charAt(0).toUpperCase() + item.name.slice(1)}
+                </Typography>
+                <Typography>
+                  {item.count}
                 </Typography>
               </Box>
               <Box
@@ -173,7 +220,7 @@ export default function HomePage() {
                   variant="contained"
                   size='small'
                   startIcon={<DeleteIcon />}
-                  onClick={() => handleDelete(i)}
+                  onClick={() => handleDelete(item.name)}
                 >
                   <Typography fontSize={12}>Delete</Typography>
                 </Button>
