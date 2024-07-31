@@ -25,12 +25,20 @@ type PantryType = {
   count: number;
 };
 
+const categories = ['Vegetables', 'Dairy']
+
 export default function HomePage() {
   const [pantry, setPantry] = useState<PantryType[]>([]);
   const router = useRouter();
 
-  const [openCategory, setOpenCategory] = useState<boolean>(true);
-  const handleCategoryClick = () => setOpenCategory(!openCategory);
+  const [collDocs, setCollDocs] = useState<Map<string,string[]>>(new Map());
+
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
+  // const handleCategoryClick = () => setOpenCategory(!openCategory);
+  const handleCategoryClick = (category: string) => {
+    setOpenCategory(prevCategory => (prevCategory === category ? null : category));
+  };
+
 
   const [openModal, setOpenModal] = useState<boolean>(false);
   const handleOpenModal = () => setOpenModal(true);
@@ -83,7 +91,26 @@ export default function HomePage() {
     router.refresh();
   };
 
+  const getColDocs = async (coll: string) => {
+    const documents: string[] = [];
+
+    const snapshot = query(collection(firestore, coll));
+    const docs = await getDocs(snapshot);
+    docs.forEach((doc) => {
+      documents.push(doc.id);
+    });
+
+    return documents;
+  };
+
   useEffect(() => {
+    const collmap = new Map<string, string[]>();
+    categories.forEach((cat) => {
+      getColDocs(cat)
+        .then(documents => collmap.set(cat, documents))
+        .catch(error => console.error('Error collecting docs:', error));
+    });
+    setCollDocs(collmap);
     updatePantry()
       .then(pantryList => setPantry(pantryList))
       .catch(error => console.error('Error fetching pantry data:', error));
@@ -120,16 +147,17 @@ export default function HomePage() {
           width={'300px'}
           height={'100%'}
           border={'1px solid #333'}
+          overflow={'auto'}
         >
-          <List
+          {/* <List
             sx={{width: '100%', maxWidth: 360}}
             component='nav'
             subheader={
               <ListSubheader component='div' id='nested-list-subheader'>
               </ListSubheader>
             }
-          >
-            <ListItemButton onClick={handleCategoryClick}>
+          > */}
+            {/* <ListItemButton onClick={handleCategoryClick}>
               <ListItemText primary='Fruits' />
                 {openCategory ? <ExpandLess /> : <ExpandMore />}
             </ListItemButton>
@@ -173,10 +201,67 @@ export default function HomePage() {
               </List>
             </Collapse>
             <ListItemButton onClick={handleCategoryClick}>
-              <ListItemText primary='Vetegables' />
-                {!openCategory ? <ExpandLess /> : <ExpandMore />}
+              <ListItemText primary='Grains' />
+                {openCategory ? <ExpandLess /> : <ExpandMore />}
             </ListItemButton>
-          </List>
+            <Collapse in={openCategory} timeout={'auto'} unmountOnExit>
+              <List component='div' disablePadding>
+                
+              </List>
+            </Collapse> */}
+          {/* </List> */}
+          {Array.from(collDocs.entries()).map(([collections, documents]) => (
+            <List
+              key={collections}
+              sx={{width: '100%', maxWidth: 360}}
+              component='nav'
+              subheader={
+                <ListSubheader component='div' id='nested-list-subheader'>
+                </ListSubheader>
+              }
+            >
+              <ListItemButton onClick={() => handleCategoryClick(collections)} sx={{backgroundColor: '#E5E5E5'}}>
+                <ListItemText primary={collections} />
+                {openCategory === collections ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+              <Collapse in={openCategory === collections} timeout={'auto'} unmountOnExit>
+                <List component='div' disablePadding>
+                  {documents.map((item) => (
+                    <ListItemButton key={item}>
+                      <ListItemText primary={item} onClick={handleOpenModal}/>
+                      <Modal
+                        open={openModal}
+                        onClose={handleCloseModal}
+                        slotProps={{ backdrop: {style: {backgroundColor: 'rgba(0, 0, 0, 0.2)', boxShadow: 'none'}}}}
+                      >
+                        <Box sx={modalStyle}>
+                          <Typography variant='h6' component='h2'>
+                            How Many
+                          </Typography>
+                          <Stack width='100%' direction='row' spacing={2}>
+                            <NumberInput 
+                              placeholder='Type a number...'
+                              value={value}
+                              onChange={(event, val) => setValue(val)}
+                            />
+                            <Button 
+                              variant='outlined'
+                              onClick={() => {
+                                void handleAddItem(collections)
+                                handleCloseModal()
+                              }}
+                            >
+                              Add
+                            </Button>
+                          </Stack>
+                        </Box>
+                      </Modal>
+                    </ListItemButton>
+                  ))}
+                </List>
+              </Collapse>
+            </List>
+          ))}
         </Box>
 
         <Stack 
@@ -204,10 +289,7 @@ export default function HomePage() {
                 sx={{m: 1, p: 1}}
               >
                 <Typography>
-                  {item.name.charAt(0).toUpperCase() + item.name.slice(1)}
-                </Typography>
-                <Typography>
-                  {item.count}
+                  {`${item.name.charAt(0).toUpperCase() + item.name.slice(1)} x ${item.count}`}
                 </Typography>
               </Box>
               <Box
