@@ -2,7 +2,7 @@
 import { Box, Button, Collapse, List, ListItemButton, ListItemText, ListSubheader, Modal, Stack, TextField, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { firestore } from '../../firebase';
-import { collection, query, getDocs, deleteDoc, doc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, query, getDocs, deleteDoc, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ExpandLess, ExpandMore } from '@mui/icons-material';
@@ -61,13 +61,6 @@ export default function HomePage() {
     router.refresh();
   };
   
-  // const handleAddingItem = async (name: string, e: ChangeEvent<HTMLInputElement>) => {
-  //   const v = e.target.valueAsNumber;
-  //   if (!isNaN(v)) {
-  //     setValue(v);
-  //     await addItem(name, v)
-  //   }
-  // };
   const handleAddItem = async (itemName: string) => {
     if (value !== null) {
       await addItem(itemName, value);
@@ -77,10 +70,17 @@ export default function HomePage() {
   const addItem = async (itemName: string, itemNumber: number) => {
     const docRef = doc(collection(firestore, 'pantry'), itemName);
     const docSnap = await getDoc(docRef);
-    console.log(docSnap.data());
 
-    await setDoc(docRef, {count: 1})
-    await updatePantry();
+    if (docSnap.exists()) {
+      const currentCount: number = docSnap.data().count as number ?? 0;
+      await updateDoc(docRef, {count: currentCount + itemNumber});
+    } else {
+      await setDoc(docRef, {count: 1})
+    }
+    updatePantry()
+      .then(pantryList => setPantry(pantryList))
+      .catch(error => console.error('Error fetching pantry data:', error));
+    router.refresh();
   };
 
   useEffect(() => {
