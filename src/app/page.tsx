@@ -7,6 +7,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ExpandLess, ExpandMore } from '@mui/icons-material';
 import NumberInput from './components/input';
+// import OpenAI from 'openai';
+// import { env } from '~/env';
+
 
 const modalStyle = {
   position: 'absolute' as const,
@@ -28,6 +31,9 @@ type PantryType = {
 const categories = ['Vegetables', 'Dairy', 'Condiments', 'Fruits', 'Grains', 'Proteins', 'Spices and Herbs']
 
 export default function HomePage() {
+  // const openai = new OpenAI({
+  //   apiKey: env.OPENAI_API_KEY
+  // });
   const [pantry, setPantry] = useState<PantryType[]>([]);
   const router = useRouter();
 
@@ -121,6 +127,38 @@ export default function HomePage() {
     });
 
     return documents;
+  };
+
+  interface OpenAIResponse {
+    result?: string;
+    error?: string;
+  }
+
+  const handleOpenAIRequest = async () => {
+    try {
+      const response = await fetch('/api/openai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: ingredients }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      const res = await response.json() as OpenAIResponse;
+
+      if (res.result) {
+        const data: string = res.result;
+        console.log(data);
+      } else {
+        console.error('No result found:', res.error);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
   };
 
   useEffect(() => {
@@ -368,7 +406,23 @@ export default function HomePage() {
         bgcolor={'#ffffff'}
         flexDirection={'column'}
       >
-        <Box>
+        <Box
+          sx={{m: 1, p: 1}}
+        >
+          <Button
+            variant='contained'
+            onClick={handleOpenAIRequest}
+          >
+            Generate Recipies 
+          </Button>
+        </Box>
+        <Box
+          display={'flex'}
+          width={'500px'}
+          height={'300px'}
+          sx={{m : 1, p: 1}}
+          border={'1px solid #333'}
+        >
           AI
         </Box>
       </Box>
