@@ -1,5 +1,5 @@
 'use client';
-import { Box, Button, Collapse, List, ListItemButton, ListItemText, ListSubheader, Modal, Stack, TextField, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, Collapse, List, ListItemButton, ListItemText, ListSubheader, Modal, Paper, Stack, TextField, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { firestore } from '../../firebase';
 import { collection, query, getDocs, deleteDoc, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
@@ -25,13 +25,13 @@ type PantryType = {
   count: number;
 };
 
-const categories = ['Vegetables', 'Dairy']
+const categories = ['Vegetables', 'Dairy', 'Condiments', 'Fruits', 'Grains', 'Proteins', 'Spices and Herbs']
 
 export default function HomePage() {
   const [pantry, setPantry] = useState<PantryType[]>([]);
   const router = useRouter();
 
-  const [collDocs, setCollDocs] = useState<Map<string,string[]>>(new Map());
+  const [collDocs, setCollDocs] = useState<Map<string, string[]>>(new Map());
 
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   // const handleCategoryClick = () => setOpenCategory(!openCategory);
@@ -45,6 +45,14 @@ export default function HomePage() {
   const handleCloseModal = () => setOpenModal(false);
 
   const [value, setValue] = useState<number | null>(null);
+
+  const [autoCompleteOptions, setAutoCompleteOptions] = useState<string[]>([]);
+
+  const [selectedItem, setSelectedItem] = useState<string | null>(null);
+
+  const handleAutoCompleteChange = (event: React.SyntheticEvent, value: string | null) => {
+    setSelectedItem(value);
+  };
 
   const updatePantry = async () => {
     const snapshot = query(collection(firestore, 'pantry'));
@@ -104,17 +112,41 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    const collmap = new Map<string, string[]>();
-    categories.forEach((cat) => {
-      getColDocs(cat)
-        .then(documents => collmap.set(cat, documents))
-        .catch(error => console.error('Error collecting docs:', error));
+    const fetchDocuments = async () => {
+      const collmap = new Map<string, string[]>();
+      const fetchPromises = categories.map(async (cat) => {
+        const documents = await getColDocs(cat);
+        collmap.set(cat, documents)
+      });
+
+      try {
+        await Promise.all(fetchPromises);
+        setCollDocs(new Map(collmap));
+      } catch (error) {
+        console.error('Error collecting docs:', error);
+      }
+    };
+    fetchDocuments().catch((error) => {
+      console.error('Error in fetchingDocuments:', error);
     });
-    setCollDocs(collmap);
+    // categories.forEach((cat) => {
+    //   getColDocs(cat)
+    //     .then(documents => collmap.set(cat, documents))
+    //     .catch(error => console.error('Error collecting docs:', error));
+    // });
+    // setCollDocs(collmap);
+    // const autoCompleteOptions = Array.from(collmap.values());
+    
+    // console.log(autoCompleteOptions);
     updatePantry()
       .then(pantryList => setPantry(pantryList))
       .catch(error => console.error('Error fetching pantry data:', error));
   }, []);
+
+  useEffect(() => {
+    const flatOptions = Array.from(collDocs.values()).flat();
+    setAutoCompleteOptions(flatOptions);
+  }, [collDocs]);
 
   return (
     <Box
@@ -127,7 +159,7 @@ export default function HomePage() {
       flexDirection={'column'}
     >
       <Box
-        width={'50rem'}
+        width={'62.5rem'}
         height={'2.5rem'}
         sx={{m : 1, p: 1}}
         border={'1px solid #3333'}
@@ -140,8 +172,10 @@ export default function HomePage() {
         
       <Box
         display={'flex'}
-        width={'800px'}
-        height={'300px'}
+        // width={'800px'}
+        // height={'300px'}
+        width={'1000px'}
+        height={'500px'}
       >
         <Box
           width={'300px'}
@@ -149,68 +183,59 @@ export default function HomePage() {
           border={'1px solid #333'}
           overflow={'auto'}
         >
-          {/* <List
-            sx={{width: '100%', maxWidth: 360}}
-            component='nav'
-            subheader={
-              <ListSubheader component='div' id='nested-list-subheader'>
-              </ListSubheader>
-            }
-          > */}
-            {/* <ListItemButton onClick={handleCategoryClick}>
-              <ListItemText primary='Fruits' />
-                {openCategory ? <ExpandLess /> : <ExpandMore />}
-            </ListItemButton>
-            <Collapse in={openCategory} timeout={'auto'} unmountOnExit>
-              <List component='div' disablePadding>
-                <ListItemButton>
-                  <ListItemText primary='Apple' onClick={handleOpenModal}/>
-                  <Modal 
-                    open={openModal}
-                    onClose={handleCloseModal}
-                  >
-                    <Box sx={modalStyle}>
-                      <Typography variant='h6' component='h2'>
-                        How Many
-                      </Typography>
-                      <Stack width='100%' direction='row' spacing={2}>
-                        <NumberInput 
-                          placeholder='Type a number...'
-                          value={value}
-                          onChange={(event, val) => setValue(val)}
-                        />
-                        <Button 
-                          variant='outlined'
-                          onClick={() => {
-                            void handleAddItem('Apple')
-                            handleCloseModal()
-                          }}
-                        >
-                          Add
-                        </Button>
-                      </Stack>
-                    </Box>
-                  </Modal>
-                </ListItemButton>
-                <ListItemButton>
-                  <ListItemText primary='Banana' />
-                </ListItemButton>
-                <ListItemButton>
-                  <ListItemText primary='Orange' />
-                </ListItemButton>
-              </List>
-            </Collapse>
-            <ListItemButton onClick={handleCategoryClick}>
-              <ListItemText primary='Grains' />
-                {openCategory ? <ExpandLess /> : <ExpandMore />}
-            </ListItemButton>
-            <Collapse in={openCategory} timeout={'auto'} unmountOnExit>
-              <List component='div' disablePadding>
-                
-              </List>
-            </Collapse> */}
-          {/* </List> */}
-          {Array.from(collDocs.entries()).map(([collections, documents]) => (
+          <Autocomplete
+            options={autoCompleteOptions}
+            getOptionLabel={(option) => option}
+            onChange={handleAutoCompleteChange}
+            renderInput={(params) => <TextField {...params} label='Search Item'/>}
+            // PaperComponent={(props) => <Paper {...props} style={{ maxHeight: 200, overflow: 'hidden'}} />}
+          />
+          {selectedItem ? (
+            <List
+              sx={{width: '100%', maxWidth: 360}}
+              component='nav'
+              subheader={
+                <ListSubheader component='div' id='nested-list-subheader'>
+                </ListSubheader>
+              }
+            >
+              {Array.from(collDocs.entries()).map(([collections, documents]) => (
+                documents.includes(selectedItem) && (
+                  <ListItemButton key={selectedItem}>
+                    <ListItemText primary={selectedItem} onClick={handleOpenModal} />
+                    <Modal
+                      open={openModal}
+                      onClose={handleCloseModal}
+                      slotProps={{ backdrop: {style: {backgroundColor: 'rgba(0, 0, 0, 0.2)', boxShadow: 'none'}}}}
+                    >
+                      <Box sx={modalStyle}>
+                        <Typography variant='h6' component='h2'>
+                          How Many
+                        </Typography>
+                        <Stack width='100%' direction='row' spacing={2}>
+                          <NumberInput 
+                            placeholder='Type a number...'
+                            value={value}
+                            onChange={(event, val) => setValue(val)}
+                          />
+                          <Button 
+                            variant='outlined'
+                            onClick={() => {
+                              void handleAddItem(collections)
+                              handleCloseModal()
+                            }}
+                          >
+                            Add
+                          </Button>
+                        </Stack>
+                      </Box>
+                    </Modal>
+                  </ListItemButton>
+                )
+              ))}
+            </List>
+          ) : (
+          Array.from(collDocs.entries()).map(([collections, documents]) => (
             <List
               key={collections}
               sx={{width: '100%', maxWidth: 360}}
@@ -261,7 +286,8 @@ export default function HomePage() {
                 </List>
               </Collapse>
             </List>
-          ))}
+          ))
+        )}
         </Box>
 
         <Stack 
