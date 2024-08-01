@@ -1,5 +1,5 @@
 'use client';
-import { Autocomplete, Box, Button, Collapse, List, ListItemButton, ListItemText, ListSubheader, Modal, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, Collapse, List, ListItemButton, ListItemText, ListSubheader, Modal, Stack, TextField, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { firestore } from '../../firebase';
 import { collection, query, getDocs, deleteDoc, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
@@ -41,8 +41,16 @@ export default function HomePage() {
 
 
   const [openModal, setOpenModal] = useState<boolean>(false);
-  const handleOpenModal = () => setOpenModal(true);
-  const handleCloseModal = () => setOpenModal(false);
+  const handleOpenModal = (item: string) => {
+    setSelectedItem(item);
+    setOpenModal(true);
+    setIsModalActive(true);
+  };
+  const handleCloseModal = () => {
+    setOpenModal(false);
+    setIsModalActive(false);
+    setSelectedItem(null);
+  };
 
   const [value, setValue] = useState<number | null>(null);
 
@@ -50,7 +58,10 @@ export default function HomePage() {
 
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
+  const [isModalActive, setIsModalActive] = useState<boolean>(false);
+
   const handleAutoCompleteChange = (event: React.SyntheticEvent, value: string | null) => {
+    event.stopPropagation();
     setSelectedItem(value);
   };
 
@@ -129,15 +140,7 @@ export default function HomePage() {
     fetchDocuments().catch((error) => {
       console.error('Error in fetchingDocuments:', error);
     });
-    // categories.forEach((cat) => {
-    //   getColDocs(cat)
-    //     .then(documents => collmap.set(cat, documents))
-    //     .catch(error => console.error('Error collecting docs:', error));
-    // });
-    // setCollDocs(collmap);
-    // const autoCompleteOptions = Array.from(collmap.values());
-    
-    // console.log(autoCompleteOptions);
+  
     updatePantry()
       .then(pantryList => setPantry(pantryList))
       .catch(error => console.error('Error fetching pantry data:', error));
@@ -147,6 +150,15 @@ export default function HomePage() {
     const flatOptions = Array.from(collDocs.values()).flat();
     setAutoCompleteOptions(flatOptions);
   }, [collDocs]);
+
+  useEffect(() => {
+    const ingredients: string[] = []
+    pantry.forEach((p) => {
+      const ing = p.name + ' x' + p.count;
+      ingredients.push(ing);
+    });
+    console.log(ingredients);
+  }, [pantry]);
 
   return (
     <Box
@@ -188,7 +200,6 @@ export default function HomePage() {
             getOptionLabel={(option) => option}
             onChange={handleAutoCompleteChange}
             renderInput={(params) => <TextField {...params} label='Search Item'/>}
-            // PaperComponent={(props) => <Paper {...props} style={{ maxHeight: 200, overflow: 'hidden'}} />}
           />
           {selectedItem ? (
             <List
@@ -202,13 +213,19 @@ export default function HomePage() {
               {Array.from(collDocs.entries()).map(([collections, documents]) => (
                 documents.includes(selectedItem) && (
                   <ListItemButton key={selectedItem}>
-                    <ListItemText primary={selectedItem} onClick={handleOpenModal} />
-                    <Modal
-                      open={openModal}
+                    <ListItemText primary={selectedItem} onClick={(e) => !isModalActive && handleOpenModal(selectedItem)} />
+                    {/* <Modal
+                      open={openModal && selectedItem == selectedItem}
                       onClose={handleCloseModal}
-                      slotProps={{ backdrop: {style: {backgroundColor: 'rgba(0, 0, 0, 0.2)', boxShadow: 'none'}}}}
+                      slotProps={{ backdrop: {
+                        style: {backgroundColor: 'rgba(0, 0, 0, 0.2)', boxShadow: 'none'},
+                        onClick: (e) => {
+                          e.stopPropagation();
+                          handleCloseModal();
+                        }
+                      }}}
                     >
-                      <Box sx={modalStyle}>
+                      <Box sx={modalStyle} component={'div'} onClick={(e) => e.stopPropagation()}>
                         <Typography variant='h6' component='h2'>
                           How Many
                         </Typography>
@@ -216,20 +233,22 @@ export default function HomePage() {
                           <NumberInput 
                             placeholder='Type a number...'
                             value={value}
+                            onClick={(e) => e.stopPropagation()}
                             onChange={(event, val) => setValue(val)}
                           />
                           <Button 
                             variant='outlined'
-                            onClick={() => {
-                              void handleAddItem(collections)
-                              handleCloseModal()
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleAddItem(collections);
+                              handleCloseModal();
                             }}
                           >
                             Add
                           </Button>
                         </Stack>
                       </Box>
-                    </Modal>
+                    </Modal> */}
                   </ListItemButton>
                 )
               ))}
@@ -253,13 +272,19 @@ export default function HomePage() {
                 <List component='div' disablePadding>
                   {documents.map((item) => (
                     <ListItemButton key={item}>
-                      <ListItemText primary={item} onClick={handleOpenModal}/>
-                      <Modal
-                        open={openModal}
+                      <ListItemText primary={item} onClick={(e) => !isModalActive && handleOpenModal(item)}/>
+                      {/* <Modal
+                        open={openModal && selectedItem === item}
                         onClose={handleCloseModal}
-                        slotProps={{ backdrop: {style: {backgroundColor: 'rgba(0, 0, 0, 0.2)', boxShadow: 'none'}}}}
+                        slotProps={{ backdrop: {
+                          style: {backgroundColor: 'rgba(0, 0, 0, 0.2)', boxShadow: 'none'},
+                          onClick: (e) => {
+                            e.stopPropagation();
+                            handleCloseModal();
+                          }
+                        }}}
                       >
-                        <Box sx={modalStyle}>
+                        <Box sx={modalStyle} component={'div'} onClick={(e) => e.stopPropagation()}>
                           <Typography variant='h6' component='h2'>
                             How Many
                           </Typography>
@@ -267,20 +292,22 @@ export default function HomePage() {
                             <NumberInput 
                               placeholder='Type a number...'
                               value={value}
+                              onClick={(e) => e.stopPropagation()}
                               onChange={(event, val) => setValue(val)}
                             />
                             <Button 
                               variant='outlined'
-                              onClick={() => {
-                                void handleAddItem(collections)
-                                handleCloseModal()
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleAddItem(item);
+                                handleCloseModal();
                               }}
                             >
                               Add
                             </Button>
                           </Stack>
                         </Box>
-                      </Modal>
+                      </Modal> */}
                     </ListItemButton>
                   ))}
                 </List>
@@ -288,6 +315,41 @@ export default function HomePage() {
             </List>
           ))
         )}
+
+        <Modal
+          open={openModal}
+          onClose={handleCloseModal}
+          slotProps={{ backdrop: {
+            style: {backgroundColor: 'rgba(0, 0, 0, 0.2)', boxShadow: 'none'},
+          }}}
+        >
+          <Box sx={modalStyle} component={'div'} onClick={(e) => e.stopPropagation()}>
+            <Typography variant='h6' component='h2'>
+              How Many {selectedItem}
+            </Typography>
+            <Stack width='100%' direction='row' spacing={2}>
+              <NumberInput 
+                placeholder='Type a number...'
+                value={value}
+                // onClick={(e) => e.stopPropagation()}
+                onChange={(event, val) => setValue(val)}
+              />
+              <Button 
+                variant='outlined'
+                onClick={() => {
+                  // e.stopPropagation();
+                  if (selectedItem) {
+                    void handleAddItem(selectedItem);
+                  }
+                  handleCloseModal();
+                }}
+              >
+                Add
+              </Button>
+            </Stack>
+          </Box>
+        </Modal>
+
         </Box>
 
         <Stack 
