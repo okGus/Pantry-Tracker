@@ -8,7 +8,7 @@
 .markdown-body h1, .markdown-body h2, .markdown-body h3, 
 .markdown-body h4, .markdown-body h5, .markdown-body h6 {
   margin-top: -14px;
-  margin-bottom: -16px;
+  margin-bottom: -4px;
   font-weight: 600;
   line-height: 1.25;
 }
@@ -19,7 +19,7 @@
 
 .markdown-body ul, .markdown-body ol {
   padding-left: 2em;
-  margin-bottom: 1em;
+  margin-bottom: -1em;
 }
 
 .markdown-body li {
