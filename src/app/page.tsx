@@ -1,5 +1,5 @@
 'use client';
-import { Autocomplete, Box, Button, Collapse, Container, Grid, Link, List, ListItemButton, ListItemText, ListSubheader, Modal, Stack, TextField, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, Collapse, Container, Grid, List, ListItemButton, ListItemText, ListSubheader, Modal, Stack, TextField, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { firestore } from '../../firebase';
 import { collection, query, getDocs, deleteDoc, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
@@ -7,9 +7,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ExpandLess, ExpandMore } from '@mui/icons-material';
 import NumberInput from './components/input';
-// import OpenAI from 'openai';
-// import { env } from '~/env';
-
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+// import rehypeRaw from 'rehype-raw';
+import '~/styles/markdown-styles.css';
+import remarkBreaks from 'remark-breaks';
 
 const modalStyle = {
   position: 'absolute' as const,
@@ -31,18 +33,16 @@ type PantryType = {
 const categories = ['Vegetables', 'Dairy', 'Condiments', 'Fruits', 'Grains', 'Proteins', 'Spices and Herbs']
 
 export default function HomePage() {
-  // const openai = new OpenAI({
-  //   apiKey: env.OPENAI_API_KEY
-  // });
   const [pantry, setPantry] = useState<PantryType[]>([]);
   const router = useRouter();
+
+  const [result, setResult] = useState<string>('');
 
   const [collDocs, setCollDocs] = useState<Map<string, string[]>>(new Map());
 
   const [ingredients, setIngredients] = useState<string>('');
 
   const [openCategory, setOpenCategory] = useState<string | null>(null);
-  // const handleCategoryClick = () => setOpenCategory(!openCategory);
   const handleCategoryClick = (category: string) => {
     setOpenCategory(prevCategory => (prevCategory === category ? null : category));
   };
@@ -153,11 +153,14 @@ export default function HomePage() {
       if (res.result) {
         const data: string = res.result;
         console.log(data);
+        setResult(data);
       } else {
         console.error('No result found:', res.error);
+        setResult('An error occurred while processing your request.');
       }
     } catch (error) {
       console.error('Error:', error);
+      setResult('An error occurred while processing your request.');
     }
   };
 
@@ -418,12 +421,24 @@ export default function HomePage() {
         </Box>
         <Box
           display={'flex'}
-          width={'500px'}
-          height={'300px'}
+          flexDirection={'column'}
+          width={'1000px'}
+          height={'400px'}
           sx={{m : 1, p: 1}}
           border={'1px solid #333'}
+          overflow={'auto'}
+          whiteSpace={'pre-wrap'}
         >
-          AI
+          <div className='markdown-body'>
+            <ReactMarkdown 
+              remarkPlugins={[remarkGfm, remarkBreaks]}
+              components={{
+                li: ({children}) => <li style={{marginBottom: '0.5em'}}>{children}</li>
+              }}
+            >
+              {result}
+            </ReactMarkdown>
+          </div>
         </Box>
       </Box>
       
