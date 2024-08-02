@@ -279,10 +279,10 @@ export default function HomePage() {
                   </ListSubheader>
                 }
               >
-                {Array.from(collDocs.entries()).map(([collections, documents]) => (
+                {Array.from(collDocs.entries()).map(([_collections, documents]) => (
                   documents.includes(selectedItem) && (
                     <ListItemButton key={selectedItem}>
-                      <ListItemText primary={selectedItem} onClick={(e) => !isModalActive && handleOpenModal(selectedItem)} />
+                      <ListItemText primary={selectedItem} onClick={(_e) => !isModalActive && handleOpenModal(selectedItem)} />
                     </ListItemButton>
                   )
                 ))}
@@ -306,7 +306,7 @@ export default function HomePage() {
                   <List component='div' disablePadding>
                     {documents.map((item) => (
                       <ListItemButton key={item}>
-                        <ListItemText primary={item} onClick={(e) => !isModalActive && handleOpenModal(item)}/>
+                        <ListItemText primary={item} onClick={(_e) => !isModalActive && handleOpenModal(item)}/>
                       </ListItemButton>
                     ))}
                   </List>
