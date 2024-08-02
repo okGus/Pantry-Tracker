@@ -152,7 +152,6 @@ export default function HomePage() {
 
       if (res.result) {
         const data: string = res.result;
-        console.log(data);
         setResult(data);
       } else {
         console.error('No result found:', res.error);
