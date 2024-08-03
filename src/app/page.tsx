@@ -107,9 +107,13 @@ export default function HomePage() {
 
     if (docSnap.exists()) {
       const currentCount: number = docSnap.data().count as number ?? 0;
-      await updateDoc(docRef, {count: currentCount + itemNumber});
+      if (currentCount + itemNumber === 0) {
+        await handleDelete(itemName);
+      } else {
+        await updateDoc(docRef, {count: currentCount + itemNumber});
+      }
     } else {
-      await setDoc(docRef, {count: 1})
+      await setDoc(docRef, {count: itemNumber})
     }
     updatePantry()
       .then(pantryList => setPantry(pantryList))
@@ -331,7 +335,7 @@ export default function HomePage() {
                   placeholder='Type a number...'
                   value={value}
                   // onClick={(e) => e.stopPropagation()}
-                  onChange={(event, val) => setValue(val)}
+                  onChange={(event, val) => {setValue(val)}}
                 />
                 <Button 
                   variant='outlined'
